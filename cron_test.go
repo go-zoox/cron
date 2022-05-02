@@ -1,11 +1,14 @@
 package cron
 
 import (
+	"sync"
 	"testing"
 	"time"
 )
 
 func TestCron(t *testing.T) {
+	wg := &sync.WaitGroup{}
+
 	c, err := New()
 	if err != nil {
 		t.Fatal(err)
@@ -15,13 +18,20 @@ func TestCron(t *testing.T) {
 	// 	t.Log("cron job ran at", time.Now())
 	// })
 
+	wg.Add(1)
+	start := time.Now()
 	c.AddSecondlyJob(func() {
 		t.Log("cron job ran at", time.Now())
+		if time.Since(start) > 3*time.Second {
+			wg.Done()
+		}
 	})
 
 	c.Start()
 
-	for {
-		time.Sleep(time.Second)
-	}
+	// for {
+	// 	time.Sleep(time.Second)
+	// }
+
+	wg.Wait()
 }

@@ -7,14 +7,17 @@ import (
 	robCron "github.com/robfig/cron/v3"
 )
 
+// Cron is a schedule job, which can be used to run jobs on a schedule.
 type Cron struct {
 	core *robCron.Cron
 }
 
+// Config is a wrapper of robCron.Config
 type Config struct {
 	TimeZone string
 }
 
+// New creates a new Cron with the given configuration.
 func New(cfg ...*Config) (*Cron, error) {
 	var core *robCron.Cron
 	if len(cfg) > 1 {
@@ -40,42 +43,17 @@ func New(cfg ...*Config) (*Cron, error) {
 	}, nil
 }
 
+// AddJob adds a Job to the Cron to be run on the given schedule.
 func (c *Cron) AddJob(spec string, job func()) {
 	c.core.AddFunc(spec, job)
 }
 
+// Start starts the cron scheduler in a new goroutine.
 func (c *Cron) Start() {
 	c.core.Start()
 }
 
+// Stop stops the cron scheduler.
 func (c *Cron) Stop() {
 	c.core.Stop()
-}
-
-func (c *Cron) AddSecondlyJob(cmd func()) {
-	c.core.AddFunc("@every 1s", cmd)
-}
-
-func (c *Cron) AddMinutelyJob(cmd func()) {
-	c.core.AddFunc("*/1 * * * *", cmd)
-}
-
-func (c *Cron) AddHourlyJob(cmd func()) {
-	c.core.AddFunc("@hourly", cmd)
-}
-
-func (c *Cron) AddDailyJob(cmd func()) {
-	c.core.AddFunc("@daily", cmd)
-}
-
-func (c *Cron) AddWeeklyJob(cmd func()) {
-	c.core.AddFunc("@weekly", cmd)
-}
-
-func (c *Cron) AddMonthlyJob(cmd func()) {
-	c.core.AddFunc("@monthly", cmd)
-}
-
-func (c *Cron) AddYearlyJob(cmd func()) {
-	c.core.AddFunc("@yearly", cmd)
 }
