@@ -44,12 +44,9 @@ func main(t *testing.T) {
 ```
 
 ## Inspired by
-* [dirkaholic/kyoo](https://github.com/dirkaholic/kyoo) - Unlimited job queue for go, using a pool of concurrent workers processing the job queue entries
-
-## Related
-* [go-zoox/cocurrent](https://github.com/go-zoox/cocurrent) - A Simple Goroutine Limit Pool
-* [go-zoox/waitgroup](https://github.com/go-zoox/waitgroup) - Parallel-Controlled WaitGroup
-* [go-zoox/promise](https://github.com/go-zoox/promise) - JavaScript Promise Like with Goroutines
+* [reugn/go-quartz](https://github.com/reugn/go-quartz) - Minimalist and zero-dependency scheduling library for Go
+* [go-co-op/gocron](https://github.com/go-co-op/gocron) - Easy and fluent Go cron scheduling
+* [robfig/cron](https://github.com/robfig/cron) - a cron library for go
 
 ## License
 GoZoox is released under the [MIT License](./LICENSE).
