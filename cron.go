@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-zoox/logger"
+	"github.com/go-zoox/safe"
 	robCron "github.com/robfig/cron/v3"
 )
 
@@ -44,8 +46,12 @@ func New(cfg ...*Config) (*Cron, error) {
 }
 
 // AddJob adds a Job to the Cron to be run on the given schedule.
-func (c *Cron) AddJob(spec string, job func()) {
-	c.core.AddFunc(spec, job)
+func (c *Cron) AddJob(spec string, job func() error) {
+	c.core.AddFunc(spec, func() {
+		if err := safe.Do(job); err != nil {
+			logger.Error("cron job failed: %v", err)
+		}
+	})
 }
 
 // Start starts the cron scheduler in a new goroutine.
