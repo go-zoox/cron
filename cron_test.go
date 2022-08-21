@@ -20,7 +20,7 @@ func TestCron(t *testing.T) {
 
 	wg.Add(1)
 	start := time.Now()
-	c.AddSecondlyJob(func() error {
+	c.AddSecondlyJob("test", func() error {
 		t.Log("cron job ran at", time.Now())
 		if time.Since(start) > 3*time.Second {
 			wg.Done()

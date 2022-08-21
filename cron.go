@@ -46,10 +46,10 @@ func New(cfg ...*Config) (*Cron, error) {
 }
 
 // AddJob adds a Job to the Cron to be run on the given schedule.
-func (c *Cron) AddJob(spec string, job func() error) {
+func (c *Cron) AddJob(name string, spec string, job func() error) {
 	c.core.AddFunc(spec, func() {
 		if err := safe.Do(job); err != nil {
-			logger.Error("cron job failed: %v", err)
+			logger.Error("[cron][name: %s] job failed: %v", name, err)
 		}
 	})
 }
