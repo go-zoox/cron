@@ -46,20 +46,54 @@ func New(cfg ...*Config) (*Cron, error) {
 }
 
 // AddJob adds a Job to the Cron to be run on the given schedule.
-func (c *Cron) AddJob(name string, spec string, job func() error) {
-	c.core.AddFunc(spec, func() {
+func (c *Cron) AddJob(name string, spec string, job func() error) (int, error) {
+	id, err := c.core.AddFunc(spec, func() {
 		if err := safe.Do(job); err != nil {
 			logger.Error("[cron][name: %s] job failed: %v", name, err)
 		}
 	})
+	if err != nil {
+		return 0, err
+	}
+
+	return int(id), nil
+}
+
+// RemoveJob removes a Job from the Cron to be run on the given schedule.
+func (c *Cron) RemoveJob(id int) (err error) {
+	c.core.Remove(robCron.EntryID(id))
+	return
+}
+
+// ClearJobs clears all jobs.
+func (c *Cron) ClearJobs() (err error) {
+	for _, entry := range c.core.Entries() {
+		c.core.Remove(entry.ID)
+	}
+
+	return
+}
+
+// Length returns the number of jobs in the given schedule.
+func (c *Cron) Length() int {
+	return len(c.core.Entries())
 }
 
 // Start starts the cron scheduler in a new goroutine.
-func (c *Cron) Start() {
+func (c *Cron) Start() (err error) {
 	c.core.Start()
+	return
 }
 
 // Stop stops the cron scheduler.
-func (c *Cron) Stop() {
+func (c *Cron) Stop() (err error) {
 	c.core.Stop()
+	return
+}
+
+// Restart starts the cron scheduler in a new goroutine.
+func (c *Cron) Restart() (err error) {
+	c.Stop()
+	c.Start()
+	return
 }
