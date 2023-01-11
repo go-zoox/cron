@@ -97,3 +97,8 @@ func (c *Cron) Restart() (err error) {
 	c.Start()
 	return
 }
+
+// Clear clears the cron scheduler jobs.
+func (c *Cron) Clear() (err error) {
+	return c.ClearJobs()
+}
