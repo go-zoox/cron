@@ -20,13 +20,27 @@ func TestCron(t *testing.T) {
 
 	wg.Add(1)
 	start := time.Now()
-	c.AddSecondlyJob("test", func() error {
+	err = c.AddSecondlyJob("test", func() error {
 		t.Log("cron job ran at", time.Now())
 		if time.Since(start) > 3*time.Second {
 			wg.Done()
 		}
 		return nil
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = c.AddSecondlyJob("test", func() error {
+		t.Log("cron job ran at", time.Now())
+		if time.Since(start) > 3*time.Second {
+			wg.Done()
+		}
+		return nil
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
 
 	c.Start()
 

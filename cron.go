@@ -2,8 +2,10 @@ package cron
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
+	"github.com/go-zoox/cache"
 	"github.com/go-zoox/logger"
 	"github.com/go-zoox/safe"
 	robCron "github.com/robfig/cron/v3"
@@ -11,7 +13,9 @@ import (
 
 // Cron is a schedule job, which can be used to run jobs on a schedule.
 type Cron struct {
-	core *robCron.Cron
+	core  *robCron.Cron
+	cache cache.Cache
+	sync.Mutex
 }
 
 // Config is a wrapper of robCron.Config
@@ -41,28 +45,55 @@ func New(cfg ...*Config) (*Cron, error) {
 	}
 
 	return &Cron{
-		core: core,
+		core:  core,
+		cache: cache.New(),
 	}, nil
 }
 
 // AddJob adds a Job to the Cron to be run on the given schedule.
-func (c *Cron) AddJob(name string, spec string, job func() error) (int, error) {
-	id, err := c.core.AddFunc(spec, func() {
+func (c *Cron) AddJob(id string, spec string, job func() error) error {
+	c.Lock()
+	defer c.Unlock()
+
+	if ok := c.cache.Has(id); ok {
+		return fmt.Errorf("cron: job %s already exists", id)
+	}
+
+	innerID, err := c.core.AddFunc(spec, func() {
 		if err := safe.Do(job); err != nil {
-			logger.Error("[cron][name: %s] job failed: %v", name, err)
+			logger.Error("[cron][name: %s] job failed: %v", id, err)
 		}
 	})
 	if err != nil {
-		return 0, err
+		return err
 	}
 
-	return int(id), nil
+	fmt.Println("asdasd:", id)
+	if err := c.cache.Set(id, innerID); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // RemoveJob removes a Job from the Cron to be run on the given schedule.
-func (c *Cron) RemoveJob(id int) (err error) {
-	c.core.Remove(robCron.EntryID(id))
+func (c *Cron) RemoveJob(id string) (err error) {
+	var innerID robCron.EntryID
+	if err = c.cache.Get(id, &innerID); err != nil {
+		return
+	}
+
+	if err = c.cache.Del(id); err != nil {
+		return
+	}
+
+	c.core.Remove(innerID)
 	return
+}
+
+// HasJob returns true if the given job exists.
+func (c *Cron) HasJob(id string) bool {
+	return c.cache.Has(id)
 }
 
 // ClearJobs clears all jobs.
