@@ -68,8 +68,7 @@ func (c *Cron) AddJob(id string, spec string, job func() error) error {
 		return err
 	}
 
-	fmt.Println("asdasd:", id)
-	if err := c.cache.Set(id, innerID); err != nil {
+	if err := c.cache.Set(id, &innerID); err != nil {
 		return err
 	}
 
