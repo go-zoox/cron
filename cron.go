@@ -16,11 +16,17 @@ type Cron struct {
 	core  *robCron.Cron
 	cache cache.Cache
 	sync.Mutex
+
+	cfg *Config
 }
 
 // Config is a wrapper of robCron.Config
 type Config struct {
+	// TimeZone is the timezone in which the cron will run.
 	TimeZone string
+
+	// RunNow specifies whether to run the job immediately after adding it.
+	RunRightNow bool
 }
 
 // New creates a new Cron with the given configuration.
@@ -30,8 +36,9 @@ func New(cfg ...*Config) (*Cron, error) {
 		return nil, fmt.Errorf("cron: only one config is allowed")
 	}
 
+	_cfg := &Config{}
 	if len(cfg) == 1 && cfg[0] != nil {
-		_cfg := *cfg[0]
+		_cfg = cfg[0]
 		if _cfg.TimeZone != "" {
 			tz, err := time.LoadLocation(_cfg.TimeZone)
 			if err != nil {
@@ -47,16 +54,38 @@ func New(cfg ...*Config) (*Cron, error) {
 	return &Cron{
 		core:  core,
 		cache: cache.New(),
+		cfg:   _cfg,
 	}, nil
 }
 
+// AddJobConfig is a configuration for AddJob.
+type AddJobConfig struct {
+	// RunRightNow specifies whether to run the job immediately after adding it.
+	RunRightNow bool
+}
+
+// AddJobOption is a function that configures the AddJob.
+type AddJobOption func(cfg *AddJobConfig)
+
 // AddJob adds a Job to the Cron to be run on the given schedule.
-func (c *Cron) AddJob(id string, spec string, job func() error) error {
+func (c *Cron) AddJob(id string, spec string, job func() error, opts ...AddJobOption) error {
 	c.Lock()
 	defer c.Unlock()
 
+	cfg := &AddJobConfig{}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
 	if ok := c.cache.Has(id); ok {
 		return fmt.Errorf("cron: job %s already exists", id)
+	}
+
+	// run the job immediately
+	if c.cfg.RunRightNow {
+		go safe.Do(job)
+	} else if cfg.RunRightNow {
+		go safe.Do(job)
 	}
 
 	innerID, err := c.core.AddFunc(spec, func() {
