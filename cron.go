@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-zoox/cache"
+	sf "github.com/go-zoox/core-utils/safe"
 	"github.com/go-zoox/logger"
 	"github.com/go-zoox/safe"
 	robCron "github.com/robfig/cron/v3"
@@ -14,7 +14,7 @@ import (
 // Cron is a schedule job, which can be used to run jobs on a schedule.
 type Cron struct {
 	core  *robCron.Cron
-	cache cache.Cache
+	cache *sf.Map[string, robCron.EntryID]
 	sync.Mutex
 
 	cfg *Config
@@ -53,7 +53,7 @@ func New(cfg ...*Config) (*Cron, error) {
 
 	return &Cron{
 		core:  core,
-		cache: cache.New(),
+		cache: sf.NewMap[string, robCron.EntryID](),
 		cfg:   _cfg,
 	}, nil
 }
@@ -97,7 +97,7 @@ func (c *Cron) AddJob(id string, spec string, job func() error, opts ...AddJobOp
 		return err
 	}
 
-	if err := c.cache.Set(id, &innerID); err != nil {
+	if err := c.cache.Set(id, innerID); err != nil {
 		return err
 	}
 
@@ -107,7 +107,7 @@ func (c *Cron) AddJob(id string, spec string, job func() error, opts ...AddJobOp
 // RemoveJob removes a Job from the Cron to be run on the given schedule.
 func (c *Cron) RemoveJob(id string) (err error) {
 	var innerID robCron.EntryID
-	if err = c.cache.Get(id, &innerID); err != nil {
+	if innerID := c.cache.Get(id); innerID == 0 {
 		return
 	}
 
@@ -129,6 +129,8 @@ func (c *Cron) ClearJobs() (err error) {
 	for _, entry := range c.core.Entries() {
 		c.core.Remove(entry.ID)
 	}
+
+	c.cache.Clear()
 
 	return
 }
