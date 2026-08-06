@@ -2,6 +2,7 @@ package cron
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -39,15 +40,22 @@ func New(cfg ...*Config) (*Cron, error) {
 	_cfg := &Config{}
 	if len(cfg) == 1 && cfg[0] != nil {
 		_cfg = cfg[0]
-		if _cfg.TimeZone != "" {
-			tz, err := time.LoadLocation(_cfg.TimeZone)
-			if err != nil {
-				return nil, fmt.Errorf("failed to load timezone: %w", err)
-			}
+	}
 
-			core = robCron.New(robCron.WithLocation(tz))
+	timeZone := _cfg.TimeZone
+	if timeZone == "" {
+		timeZone = os.Getenv("TZ")
+	}
+	if timeZone != "" {
+		tz, err := time.LoadLocation(timeZone)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load timezone: %w", err)
 		}
-	} else {
+
+		core = robCron.New(robCron.WithLocation(tz))
+	}
+
+	if core == nil {
 		core = robCron.New()
 	}
 
@@ -106,8 +114,11 @@ func (c *Cron) AddJob(id string, spec string, job func() error, opts ...AddJobOp
 
 // RemoveJob removes a Job from the Cron to be run on the given schedule.
 func (c *Cron) RemoveJob(id string) (err error) {
-	var innerID robCron.EntryID
-	if innerID := c.cache.Get(id); innerID == 0 {
+	c.Lock()
+	defer c.Unlock()
+
+	innerID := c.cache.Get(id)
+	if innerID == 0 {
 		return
 	}
 
